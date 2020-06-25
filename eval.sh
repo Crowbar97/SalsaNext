@@ -1,6 +1,5 @@
 #!/bin/sh
-helpFunction()
-{
+helpFunction() {
    echo "Options not found"
    exit 1
 }
@@ -27,10 +26,24 @@ then
    echo "Some or all of the parameters are empty";
    helpFunction
 fi
+
 d=$(get_abs_filename "$d")
 p=$(get_abs_filename "$p")
 m=$(get_abs_filename "$m")
+
 export CUDA_VISIBLE_DEVICES="$c"
-cd ./train/tasks/semantic/; ./infer.py -d "$d" -l "$p" -m "$m" -n "$n" -s "$s"
+
+cd ./train/tasks/semantic/
+
+./infer.py -d "$d" \
+           -l "$p" \
+           -m "$m" \
+           -n "$n" \
+           -s "$s"
+
 echo "finishing infering.\n Starting evaluating"
-./evaluate_iou.py -d "$d" -p "$p" --split "$s" -m "$m"
+
+./evaluate_iou.py -d "$d" \
+                  -p "$p" \
+                  --split "$s" \
+                  -m "$m"

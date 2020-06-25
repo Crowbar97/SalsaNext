@@ -15,7 +15,7 @@ from torch import nn
 
 
 class User():
-    def __init__(self, ARCH, DATA, datadir, logdir, modeldir,modelname,split):
+    def __init__(self, ARCH, DATA, datadir, logdir, modeldir, modelname, split):
         # parameters
         self.ARCH = ARCH
         self.DATA = DATA
@@ -26,9 +26,8 @@ class User():
         self.split = split
 
         # get the data
-        parserModule = imp.load_source("parserModule",
-                                   booger.TRAIN_PATH + '/tasks/semantic/dataset/' +
-                                   self.DATA["name"] + '/parser.py')
+        parserModule = imp.load_source('parserModule',
+                                       booger.TRAIN_PATH + '/tasks/semantic/dataset/' + self.DATA["name"] + '/parser.py')
         self.parser = parserModule.Parser(root=self.datadir,
                                           train_sequences=self.DATA["split"]["train"],
                                           valid_sequences=self.DATA["split"]["valid"],
@@ -45,28 +44,45 @@ class User():
                                           shuffle_train=False)
 
         # concatenate the encoder and the head
-        if self.modelname in ('salsanet','salsanext'):
+        if self.modelname in ('salsanet', 'salsanext'):
             with torch.no_grad():
+                print('modeldir: %s' % self.modeldir)
+                model_path = os.path.join(self.modeldir, 'SalsaNet')
+                print('model_path: %s' % model_path)
+
+                # use_gpu = torch.cuda.is_available()
+                # if use_gpu:
+                #     device = torch.device("cuda:0")  
+                # else:
+                #     device = torch.device("cpu")
+                # print('device: %s' % device)
 
                 self.model = SalsaNet(self.ARCH,
                                       self.parser.get_n_classes(),
-                                      self.modeldir)
+                                      model_path)#.to(device)
+                # self.model.cuda()
                 self.model = nn.DataParallel(self.model)
                 torch.nn.Module.dump_patches = True
-                w_dict = torch.load(modeldir + "/SalsaNet",
-                                    map_location=lambda storage, loc: storage)
-                self.model.load_state_dict(w_dict, strict=True)
+                # cudnn.benchmark = True
+
+                w_dict = torch.load(model_path, map_location=lambda storage, loc: storage)
+                # w_dict = torch.load(model_path, 'cuda:0')
+                # w_dict = torch.load(model_path, map_location=lambda storage, loc: storage.cuda(0))
+                print(w_dict['state_dict'].keys())
+                self.model.module.load_state_dict(w_dict['state_dict'], strict=True)
+
+                # w_dict = torch.load(model_path, 'cpu')
+                # self.model.module.load_state_dict(w_dict)
         else:
             with torch.no_grad():
                 self.model = Segmentator(self.ARCH,
-                                      self.parser.get_n_classes(),
-                                      self.modeldir)
+                                         self.parser.get_n_classes(),
+                                         self.modeldir)
 
         # use knn post processing?
         self.post = None
         if self.ARCH["post"]["KNN"]["use"]:
-            self.post = KNN(self.ARCH["post"]["KNN"]["params"],
-                            self.parser.get_n_classes())
+            self.post = KNN(self.ARCH["post"]["KNN"]["params"], self.parser.get_n_classes())
 
         # GPU?
         self.gpu = False
@@ -79,12 +95,12 @@ class User():
             self.gpu = True
             self.model.cuda()
 
+
     def infer(self):
-        # do train set
         if self.split == None:
+            # do train set
             self.infer_subset(loader=self.parser.get_train_set(),
                               to_orig_fn=self.parser.to_original)
-
             # do valid set
             self.infer_subset(loader=self.parser.get_valid_set(),
                               to_orig_fn=self.parser.to_original)
@@ -105,6 +121,7 @@ class User():
 
         return
 
+
     def infer_subset(self, loader, to_orig_fn):
         # switch to evaluate mode
         self.model.eval()
@@ -115,10 +132,10 @@ class User():
 
         with torch.no_grad():
             end = time.time()
+            time_sum = 0
 
-            for i, (proj_in, proj_mask, _, _, path_seq, path_name, p_x, p_y, proj_range, unproj_range, _, _, _, _,
-                    npoints) in enumerate(loader):
-                #first cut to rela size (batch size one allows it)
+            for i, (proj_in, proj_mask, _, _, path_seq, path_name, p_x, p_y, proj_range, unproj_range, _, _, _, _, npoints) in enumerate(loader):
+                # first cut to rela size (batch size one allows it)
                 p_x = p_x[0, :npoints]
                 p_y = p_y[0, :npoints]
                 proj_range = proj_range[0, :npoints]
@@ -150,11 +167,12 @@ class User():
                     unproj_argmax = proj_argmax[p_y, p_x]
 
                 # measure elapsed time
-                #if torch.cuda.is_available():
-                #    torch.cuda.synchronize()
+                # if torch.cuda.is_available():
+                #     torch.cuda.synchronize()
 
-                print("Infered seq", path_seq, "scan", path_name,
-                      "in", time.time() - end, "sec")
+                inf_time = time.time() - end
+                time_sum += inf_time
+                print("Infered seq", path_seq, "scan", path_name, "in", inf_time, "sec")
                 end = time.time()
 
                 # save scan
@@ -166,6 +184,13 @@ class User():
                 pred_np = to_orig_fn(pred_np)
 
                 # save scan
-                path = os.path.join(self.logdir, "sequences",
-                                    path_seq, "predictions", path_name)
+                path = os.path.join(self.logdir, "sequences", path_seq, "predictions", path_name)
                 pred_np.tofile(path)
+
+            print('AVG TIME: %s' % (time_sum / (i + 1)))
+
+
+    def predict(self):
+        pass
+     
+

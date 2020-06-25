@@ -38,5 +38,14 @@ then
 else
   p=$(get_abs_filename "$p")
 fi
+
 export CUDA_VISIBLE_DEVICES="$c"
-cd ./train/tasks/semantic;  ./train.py -d "$d"  -ac "$a" -m "$m" -l "$l" -n "$n" -p "$p"
+
+cd ./train/tasks/semantic
+
+./train.py -d "$d" \
+           -ac "$a" \
+           -m "$m" \
+           -l "$l" \
+           -n "$n" \
+           -p "$p"

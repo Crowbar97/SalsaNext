@@ -13,14 +13,14 @@ from tasks.semantic.modules.ioueval import iouEval
 from common.laserscan import SemLaserScan
 
 # possible splits
-splits = ['train','valid','test']
-def save_to_log(logdir,logfile,message):
+splits = ['train', 'valid', 'test']
+def save_to_log(logdir, logfile, message):
     f = open(logdir+'/'+logfile, "a")
     f.write(message+'\n')
     f.close()
     return
 
-def eval(test_sequences,splits,pred):
+def eval(test_sequences, splits, pred):
     # get scan paths
     scan_names = []
     for sequence in test_sequences:

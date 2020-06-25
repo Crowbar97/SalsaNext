@@ -13,6 +13,7 @@ import __init__ as booger
 from tasks.semantic.modules.user import *
 
 
+# CUSTOM MODULE
 if __name__ == '__main__':
     splits = ["train", "valid", "test"]
     parser = argparse.ArgumentParser("./infer.py")
@@ -63,9 +64,15 @@ if __name__ == '__main__':
     print("model", FLAGS.model)
     print("infering", FLAGS.split)
     print("----------\n")
-    #print("Commit hash (training version): ", str(
-    #    subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip()))
+    # print("Commit hash (training version): ", str(subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip()))
     print("----------\n")
+
+    # does model folder exist?
+    if os.path.isdir(FLAGS.model):
+        print("model folder exists! Using model from %s" % (FLAGS.model))
+    else:
+        print("model folder doesnt exist! Can't infer...")
+        quit()
 
     # open arch config file
     try:
@@ -89,18 +96,22 @@ if __name__ == '__main__':
     try:
         if os.path.isdir(FLAGS.log):
             shutil.rmtree(FLAGS.log)
+
         os.makedirs(FLAGS.log)
         os.makedirs(os.path.join(FLAGS.log, "sequences"))
+
         for seq in DATA["split"]["train"]:
             seq = '{0:02d}'.format(int(seq))
             print("train", seq)
             os.makedirs(os.path.join(FLAGS.log, "sequences", seq))
             os.makedirs(os.path.join(FLAGS.log, "sequences", seq, "predictions"))
+
         for seq in DATA["split"]["valid"]:
             seq = '{0:02d}'.format(int(seq))
             print("valid", seq)
             os.makedirs(os.path.join(FLAGS.log, "sequences", seq))
             os.makedirs(os.path.join(FLAGS.log, "sequences", seq, "predictions"))
+
         for seq in DATA["split"]["test"]:
             seq = '{0:02d}'.format(int(seq))
             print("test", seq)
@@ -109,21 +120,15 @@ if __name__ == '__main__':
     except Exception as e:
         print(e)
         print("Error creating log directory. Check permissions!")
-        raise
-
-    except Exception as e:
-        print(e)
-        print("Error creating log directory. Check permissions!")
-        quit()
-
-    # does model folder exist?
-    if os.path.isdir(FLAGS.model):
-        print("model folder exists! Using model from %s" % (FLAGS.model))
-    else:
-        print("model folder doesnt exist! Can't infer...")
         quit()
 
     # create user and infer dataset
     print(FLAGS.model_name)
-    user = User(ARCH, DATA, FLAGS.dataset, FLAGS.log, FLAGS.model,FLAGS.model_name,FLAGS.split)
-    user.infer()
+    user = User(ARCH,
+                DATA,
+                FLAGS.dataset,
+                FLAGS.log,
+                FLAGS.model,
+                FLAGS.model_name,
+                FLAGS.split)
+    user.predict()

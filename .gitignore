@@ -1,0 +1,8 @@
+/logs/
+/predicted/
+**/__pycache__
+*.swp
+*.swo
+*.swn
+*.pyc
+
