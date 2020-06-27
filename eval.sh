@@ -41,9 +41,9 @@ cd ./train/tasks/semantic/
            -n "$n" \
            -s "$s"
 
-echo "finishing infering.\n Starting evaluating"
-
-./evaluate_iou.py -d "$d" \
-                  -p "$p" \
-                  --split "$s" \
-                  -m "$m"
+# echo "finishing infering.\n Starting evaluating"
+# 
+# ./evaluate_iou.py -d "$d" \
+#                   -p "$p" \
+#                   -s "$s" \
+#                   -m "$m"

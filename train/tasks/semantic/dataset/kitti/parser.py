@@ -1,11 +1,19 @@
 import os
+import time
+
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+
 from common.laserscan import LaserScan, SemLaserScan
 
 EXTENSIONS_SCAN = ['.bin']
 EXTENSIONS_LABEL = ['.label']
+
+def get_sync_time():
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    return time.perf_counter()
 
 
 def is_scan(filename):
@@ -135,6 +143,9 @@ class SemanticKitti(Dataset):
       scan.sem_label = self.map(scan.sem_label, self.learning_map)
       scan.proj_sem_label = self.map(scan.proj_sem_label, self.learning_map)
 
+    # PROJECTION TIME START
+    proj_time_start = get_sync_time()
+    
     # make a tensor of the uncompressed data (with the max num points)
     unproj_n_points = scan.points.shape[0]
     unproj_xyz = torch.full((self.max_points, 3), -1.0, dtype=torch.float)
@@ -179,8 +190,28 @@ class SemanticKitti(Dataset):
     # print("path_seq", path_seq)
     # print("path_name", path_name)
 
+    # FIXME: projections are created in the opening function!
+    # PROJECTION TIME END
+    proj_time_end = get_sync_time()
+    proj_time = proj_time_end - proj_time_start
+
     # return
-    return proj, proj_mask, proj_labels, unproj_labels, path_seq, path_name, proj_x, proj_y, proj_range, unproj_range, proj_xyz, unproj_xyz, proj_remission, unproj_remissions, unproj_n_points
+    return ( proj,
+             proj_mask,
+             proj_labels,
+             unproj_labels,
+             path_seq,
+             path_name,
+             proj_x,
+             proj_y,
+             proj_range,
+             unproj_range,
+             proj_xyz,
+             unproj_xyz,
+             proj_remission,
+             unproj_remissions,
+             unproj_n_points,
+             proj_time )
 
   def __len__(self):
     return len(self.scan_files)
