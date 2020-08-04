@@ -1,6 +1,6 @@
 ./eval.sh -d /datasets/KITTI_Odometry/dataset/ \
-          -p predicted/ \
-          -m logs/40epoch/ \
+          -p eval_results/ \
+          -m logs/40epoch-wo-rem/ \
           -s valid \
           -n salsanext \
-          -c 3
+          -c 0

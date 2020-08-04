@@ -10,11 +10,6 @@ from common.laserscan import LaserScan, SemLaserScan
 EXTENSIONS_SCAN = ['.bin']
 EXTENSIONS_LABEL = ['.label']
 
-def get_sync_time():
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
-    return time.perf_counter()
-
 
 def is_scan(filename):
   return any(filename.endswith(ext) for ext in EXTENSIONS_SCAN)
@@ -136,15 +131,12 @@ class SemanticKitti(Dataset):
                        fov_down=self.sensor_fov_down)
 
     # open and obtain scan
-    scan.open_scan(scan_file)
+    proj_time = scan.open_scan(scan_file)
     if self.gt:
       scan.open_label(label_file)
       # map unused classes to used classes (also for projection)
       scan.sem_label = self.map(scan.sem_label, self.learning_map)
       scan.proj_sem_label = self.map(scan.proj_sem_label, self.learning_map)
-
-    # PROJECTION TIME START
-    proj_time_start = get_sync_time()
     
     # make a tensor of the uncompressed data (with the max num points)
     unproj_n_points = scan.points.shape[0]
@@ -174,12 +166,22 @@ class SemanticKitti(Dataset):
     proj_x[:unproj_n_points] = torch.from_numpy(scan.proj_x)
     proj_y = torch.full([self.max_points], -1, dtype=torch.long)
     proj_y[:unproj_n_points] = torch.from_numpy(scan.proj_y)
-    proj = torch.cat([proj_range.unsqueeze(0).clone(),
-                      proj_xyz.clone().permute(2, 0, 1),
-                      proj_remission.unsqueeze(0).clone()])
-    proj = (proj - self.sensor_img_means[:, None, None]
-            ) / self.sensor_img_stds[:, None, None]
+    
+    # WITH remission
+    # proj = torch.cat([proj_range.unsqueeze(0).clone(),
+    #                   proj_xyz.clone().permute(2, 0, 1),
+    #                   proj_remission.unsqueeze(0).clone()])
+    # proj = (proj - self.sensor_img_means[:, None, None]) / self.sensor_img_stds[:, None, None]
+    # proj = proj * proj_mask.float()
+    
+    # WITHOUT remission-------------------------------------
+    proj = torch.cat([
+        proj_range.unsqueeze(0).clone(),
+        proj_xyz.clone().permute(2, 0, 1),
+    ])
+    proj = (proj - self.sensor_img_means[:4, None, None]) / self.sensor_img_stds[:4, None, None]
     proj = proj * proj_mask.float()
+    # ------------------------------------------------------
 
     # get name and sequence
     path_norm = os.path.normpath(scan_file)
@@ -188,12 +190,7 @@ class SemanticKitti(Dataset):
     path_name = path_split[-1].replace(".bin", ".label")
     # print("path_norm: ", path_norm)
     # print("path_seq", path_seq)
-    # print("path_name", path_name)
-
-    # FIXME: projections are created in the opening function!
-    # PROJECTION TIME END
-    proj_time_end = get_sync_time()
-    proj_time = proj_time_end - proj_time_start
+    # print("path_name", path_name)    
 
     # return
     return ( proj,

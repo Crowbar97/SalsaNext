@@ -67,7 +67,7 @@ class User():
                 torch.nn.Module.dump_patches = True
 
                 w_dict = torch.load(model_path, map_location=lambda storage, loc: storage)
-                print(w_dict['state_dict'].keys())
+                # print(w_dict['state_dict'].keys())
 
                 self.model.module.load_state_dict(w_dict['state_dict'], strict=True)
         else:
@@ -127,12 +127,20 @@ class User():
             torch.cuda.empty_cache()
 
         with torch.no_grad():
+            # total time segments
+            total_times = []
             # infer time segments
             infer_times = []
             # projection time segments
             proj_times = []
             
+            # TOTAL TIME START
+            total_time_start = get_sync_time()
             for i, (proj_in, proj_mask, _, _, path_seq, path_name, p_x, p_y, proj_range, unproj_range, _, _, _, _, npoints, proj_time) in enumerate(loader):
+                # INFER LIMIT
+                if i == 300:
+                    break
+
                 proj_times.append(proj_time.data.cpu().numpy()[0])
 
                 # first cut to rela size (batch size one allows it)
@@ -168,14 +176,7 @@ class User():
                     unproj_argmax = proj_argmax[p_y, p_x]
 
                 # INFER TIME END
-                infer_time_end = get_sync_time()
-
-                infer_times.append(infer_time_end - infer_time_start)
-                print('Infered sequence: %s' % path_seq)
-                print('Scan: %s' % path_name)
-                print('Proj time: %s sec' % proj_times[-1])
-                print('Infer time: %s sec' % infer_times[-1])
-                print('Total time: %s sec' % (proj_times[-1] + infer_times[-1]))
+                infer_times.append(get_sync_time() - infer_time_start)
 
                 # save scan
                 # get the first scan in batch and project scan
@@ -188,6 +189,20 @@ class User():
                 # save scan
                 path = os.path.join(self.logdir, 'sequences', path_seq, 'predictions', path_name)
                 pred_np.tofile(path)
+
+                # TOTAL TIME END
+                total_times.append(get_sync_time() - total_time_start)
+
+                print('Infered sequence: %s' % path_seq)
+                print('Scan: %s' % path_name)
+                print('Proj time: %s sec' % proj_times[-1])
+                print('Infer time: %s sec' % infer_times[-1])
+                print('Proj + Infer time: %s sec' % (proj_times[-1] + infer_times[-1]))
+                print('Side time: %s sec' % (total_times[-1] - (proj_times[-1] + infer_times[-1])))
+                print('Total time: %s sec' % (total_times[-1]))
+
+                # TOTAL TIME START
+                total_time_start = get_sync_time()
                 
 
             print('*' * 30)
@@ -204,6 +219,13 @@ class User():
             print('COUNT: %s' % len(proj_times[1:]))
             # plt.plot(proj_times[1:])
             # plt.savefig('proj_time.png')
+            print('-' * 15)
+            print('TOTAL TIME STATISTICS')
+            print('MEAN: %s' % np.mean(total_times[1:]))
+            print('STD: %s' % np.std(total_times[1:]))
+            print('COUNT: %s' % len(total_times[1:]))
+            # plt.plot(total_times[1:])
+            # plt.savefig('total_times.png')
 
     def predict(self):
         pass

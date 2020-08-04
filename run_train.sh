@@ -2,4 +2,4 @@
            -a salsanext.yml \
            -m salsanext \
            -l ./ \
-           -c 3
+           -c 1

@@ -3,6 +3,12 @@
 import time
 
 import numpy as np
+import torch
+
+def get_sync_time():
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    return time.perf_counter()
 
 
 class LaserScan:
@@ -79,7 +85,12 @@ class LaserScan:
         # put in attribute
         points = scan[:, 0:3]  # get xyz
         remissions = scan[:, 3]  # get remission
-        self.set_points(points, remissions)
+
+        # WITH REMISSION
+        return self.set_points(points, remissions)
+        
+        # ZERO REMISSION
+#         self.set_points(points, None)
 
     def set_points(self, points, remissions=None):
         """ Set scan attributes (instead of opening from file)
@@ -104,7 +115,13 @@ class LaserScan:
 
         # if projection is wanted, then do it and fill in the structure
         if self.project:
+            # PROJECTION TIME START
+            proj_time_start = get_sync_time()
             self.do_range_projection()
+            # PROJECTION TIME END
+            return get_sync_time() - proj_time_start
+
+        return -1
 
     def do_range_projection(self):
         """ Project a pointcloud into a spherical projection image.projection.
@@ -112,6 +129,7 @@ class LaserScan:
             if the value of the constructor was not set (in case you change your
             mind about wanting the projection)
         """
+
         # laser parameters
         fov_up = self.proj_fov_up / 180.0 * np.pi  # field of view up in rad
         fov_down = self.proj_fov_down / 180.0 * np.pi  # field of view down in rad

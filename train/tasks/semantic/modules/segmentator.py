@@ -209,7 +209,12 @@ class SalsaNet(nn.Module):
         self.path_append = path_append
         self.strict = False
 
-        self.downCntx = ResContextBlock(5, 32)
+        # WITH remission
+        # self.downCntx = ResContextBlock(5, 32)
+        
+        # WITHOUT remission
+        self.downCntx = ResContextBlock(4, 32)
+        
         self.resBlock1 = ResBlock(32, 32, 0.2, pooling=True, drop_out=False)
         self.resBlock2 = ResBlock(32, 2 * 32, 0.2, pooling=True)
         self.resBlock3 = ResBlock(2 * 32, 4 * 32, 0.2, pooling=True)
