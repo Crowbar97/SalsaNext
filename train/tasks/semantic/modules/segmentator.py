@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tasks.resnet_ocr.network.base_oc_block import BaseOC_Module
+
 
 class Add(nn.Module):
     def __init__(self):
@@ -200,6 +202,42 @@ class UpBlock(nn.Module):
         return upE
 
 
+class OCRModule(nn.Module):
+    def __init__(self, inplanes, outplanes):
+        super(OCRModule, self).__init__()
+        self.context = nn.Sequential(
+                            nn.Conv2d(inplanes, outplanes, kernel_size=3, stride=1, padding=1),
+                            nn.BatchNorm2d(outplanes),
+                            BaseOC_Module(
+                                in_channels=outplanes,
+                                out_channels=outplanes,
+                                key_channels=outplanes // 2,
+                                value_channels=outplanes // 2,
+                                dropout=0.05,
+                                sizes=([1])
+                            )
+                        )
+        # self.cls = nn.Conv2d(outplanes, num_classes, kernel_size=1, stride=1, padding=0, bias=True)
+
+    def forward(self, x):
+        input_shape = x.shape[-2:]
+        # print('x shape: %s' % str(x.shape))
+        # print('input shape: %s' % str(input_shape))
+
+        x = self.context(x)
+        # print('context: ', x.shape)
+        
+        # TODO: need?
+        # x = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=True)
+        # print('output: ', x.shape)
+        
+        # result = OrderedDict()
+        # result['out'] = x
+        
+        # return result
+        return x
+
+
 class SalsaNet(nn.Module):
     def __init__(self, ARCH, nclasses, path=None, path_append="", strict=False):
         super(SalsaNet, self).__init__()
@@ -222,6 +260,8 @@ class SalsaNet(nn.Module):
         self.resBlock5 = ResBlock(8 * 32, 16 * 32, 0.2, pooling=True)
         self.resBlock6 = ResBlock(16 * 32, 16 * 32, 0.2, pooling=False)
 
+        self.ocrModule = OCRModule(inplanes=512, outplanes=512)
+
         self.upBlock1 = UpBlock(16 * 32, 16 * 32, 0.2)
         self.upBlock2 = UpBlock(16 * 32, 8 * 32, 0.2)
         self.upBlock3 = UpBlock(8 * 32, 4 * 32, 0.2)
@@ -238,6 +278,11 @@ class SalsaNet(nn.Module):
         down3c, down3b = self.resBlock4(down2c)
         down4c, down4b = self.resBlock5(down3c)
         down5b = self.resBlock6(down4c)
+
+        # put OCR module HERE
+        # 1, 512, 2, 64
+        # print('down shape: %s' % str(down5b.shape))
+        down5b = self.ocrModule(down5b)
 
         up4e = self.upBlock1(down5b, down4b)
         up3e = self.upBlock2(up4e, down3b)

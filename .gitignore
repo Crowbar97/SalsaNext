@@ -1,6 +1,7 @@
 /logs/
 /predicted/
 /eval_results/
+/eval_stats/
 **/__pycache__
 **/.ipynb_checkpoints
 *.swp

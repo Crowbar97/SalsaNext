@@ -63,8 +63,10 @@ def eval(test_sequences, splits, pred):
     # check that I have the same number of files
     # print("labels: ", len(label_names))
     # print("predictions: ", len(pred_names))
-    assert (len(label_names) == len(scan_names) and
-            len(label_names) == len(pred_names))
+
+    # FOR ABILITY TO USE LIMITED INFER SCAN COUNT
+    # assert (len(label_names) == len(scan_names) and
+    #         len(label_names) == len(pred_names))
 
     print("Evaluating sequences: ")
     # open each file, get the tensor, and make the iou comparison

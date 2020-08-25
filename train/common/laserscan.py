@@ -6,8 +6,8 @@ import numpy as np
 import torch
 
 def get_sync_time():
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    # if torch.cuda.is_available():
+    #     torch.cuda.synchronize()
     return time.perf_counter()
 
 

@@ -67,6 +67,7 @@ class User():
                 torch.nn.Module.dump_patches = True
 
                 w_dict = torch.load(model_path, map_location=lambda storage, loc: storage)
+                print('EPOCH: %s' % w_dict['epoch'])
                 # print(w_dict['state_dict'].keys())
 
                 self.model.module.load_state_dict(w_dict['state_dict'], strict=True)
@@ -138,8 +139,8 @@ class User():
             total_time_start = get_sync_time()
             for i, (proj_in, proj_mask, _, _, path_seq, path_name, p_x, p_y, proj_range, unproj_range, _, _, _, _, npoints, proj_time) in enumerate(loader):
                 # INFER LIMIT
-                if i == 300:
-                    break
+                # if i == 100:
+                #     break
 
                 proj_times.append(proj_time.data.cpu().numpy()[0])
 
@@ -166,7 +167,10 @@ class User():
 
                 # compute output
                 proj_output = self.model(proj_in)
+                print('OUT: %s' % str(proj_output.shape))
+
                 proj_argmax = proj_output[0].argmax(dim=0)
+                print('MAX: %s' % str(proj_argmax.shape))
 
                 if self.post:
                     # knn postproc

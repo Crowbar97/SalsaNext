@@ -160,6 +160,14 @@ class Trainer():
             torch.nn.Module.dump_patches = True
             w_dict = torch.load(path + "/SalsaNet",
                                 map_location=lambda storage, loc: storage)
+
+            # ONE TIME PATCH
+            # dict_keys = list(w_dict['state_dict'].keys())
+            # for key in dict_keys:
+            #     w_dict['state_dict'][key[len('module.'):]] = w_dict['state_dict'][key]
+            #     del w_dict['state_dict'][key]
+            # print('KEYS: %s' % w_dict['state_dict'].keys())
+
             self.model.load_state_dict(w_dict['state_dict'], strict=True)
             self.optimizer.load_state_dict(w_dict['optimizer'])
             self.epoch = w_dict['epoch'] + 1
@@ -251,6 +259,7 @@ class Trainer():
 
             # compute output
             output = model(in_vol)
+
             loss = criterion(torch.log(output.clamp(min=1e-8)), proj_labels) + self.ls(output, proj_labels.long())
 
             optimizer.zero_grad()
